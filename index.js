@@ -63,6 +63,23 @@ const dbConfig = {
 // Create connection pool
 const pool = mysql.createPool(dbConfig);
 
+// Add root route
+app.get('/', (req, res) => {
+    res.json({ 
+        message: 'Student Management API is running!',
+        endpoints: {
+            students: '/api/students',
+            courses: '/api/courses',
+            marks: '/api/marks'
+        }
+    });
+});
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+    res.json({ status: 'OK', timestamp: new Date().toISOString() });
+});
+
 // Students API Routes
 app.get('/api/students', async (req, res) => {
     try {
@@ -229,6 +246,14 @@ app.get('/api/marks/student/:studentId', async (req, res) => {
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
+});
+
+// Handle 404 for undefined routes
+app.use('*', (req, res) => {
+    res.status(404).json({ 
+        error: 'Route not found',
+        availableRoutes: ['/', '/api/health', '/api/students', '/api/courses', '/api/marks']
+    });
 });
 
 app.listen(PORT, () => {
