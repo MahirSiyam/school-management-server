@@ -57,7 +57,8 @@ const dbConfig = {
     host: process.env.DB_HOST || 'localhost',
     user: process.env.DB_USER || 'root',
     password: process.env.DB_PASSWORD || '',
-    database: process.env.DB_NAME || 'student_management'
+    database: process.env.DB_NAME || 'student_management',
+    port: process.env.DB_PORT 
 };
 
 // Create connection pool
@@ -65,6 +66,7 @@ const pool = mysql.createPool(dbConfig);
 
 // Students API Routes
 app.get('/api/students', async (req, res) => {
+
     try {
         const [rows] = await pool.execute('SELECT * FROM students ORDER BY created_at DESC');
         res.json(rows);
@@ -74,7 +76,18 @@ app.get('/api/students', async (req, res) => {
 });
 
 app.post('/api/students', async (req, res) => {
+  console.log();
     try {
+    await pool.execute (`CREATE TABLE IF NOT EXISTS students (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    student_id VARCHAR(20) UNIQUE NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    phone VARCHAR(15),
+    date_of_birth DATE,
+    address TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)`);
         const { student_id, name, email, phone, date_of_birth } = req.body;
         const [result] = await pool.execute(
             'INSERT INTO students (student_id, name, email, phone, date_of_birth) VALUES (?, ?, ?, ?, ?)',
@@ -122,6 +135,15 @@ app.get('/api/courses', async (req, res) => {
 
 app.post('/api/courses', async (req, res) => {
     try {
+
+      await pool.execute(`CREATE TABLE IF NOT EXISTS courses (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    course_code VARCHAR(20) UNIQUE NOT NULL,
+    course_name VARCHAR(100) NOT NULL,
+    credits INT NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)`);
         const { course_code, course_name, credits, description } = req.body;
         const [result] = await pool.execute(
             'INSERT INTO courses (course_code, course_name, credits, description) VALUES (?, ?, ?, ?)',
@@ -180,6 +202,19 @@ app.get('/api/marks', async (req, res) => {
 
 app.post('/api/marks', async (req, res) => {
     try {
+        // Create marks table if it doesn't exist
+        await pool.execute(`CREATE TABLE IF NOT EXISTS marks (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            student_id INT,
+            course_id INT,
+            marks_obtained DECIMAL(5,2),
+            total_marks DECIMAL(5,2) DEFAULT 100,
+            semester VARCHAR(20),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
+            FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
+        )`);
+
         const { student_id, course_id, marks_obtained, total_marks, semester } = req.body;
         const [result] = await pool.execute(
             'INSERT INTO marks (student_id, course_id, marks_obtained, total_marks, semester) VALUES (?, ?, ?, ?, ?)',
